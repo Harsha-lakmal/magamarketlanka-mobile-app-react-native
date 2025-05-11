@@ -1,31 +1,15 @@
 import React from 'react';
-import {
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
-
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+import {StyleSheet,Text,View,} from 'react-native';
+import Login from './src/page/LoginPage/Login';
 
 
 function App() {
 
   
-
-  const safePadding = '5%';
-
   return (
     <View>
-      <Text>I am Harsha Lakmal .  this is petZon-lanka-moblie app </Text>
+      {/* <Text>I am Harsha Lakmal</Text> */}
+      <Login/>
     </View>
   );
 }
