@@ -1,22 +1,11 @@
 import React from 'react';
-import {StyleSheet,Text,View,} from 'react-native';
-import Login from './src/page/LoginPage/Login';
-import SignUp from './src/page/SignUpPage/SignUp';
+import { NavigationContainer } from '@react-navigation/native';
+import MyTabs from './src/comon/MyTabBar/MyTabBar';
 
-
-function App() {
-
-  
+export default function App() {
   return (
-    <View>
-      {/* <Text>I am Harsha Lakmal</Text> */}
-      <SignUp/>
-    </View>
+    <NavigationContainer>
+      <MyTabs />
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-
-});
-
-export default App;
