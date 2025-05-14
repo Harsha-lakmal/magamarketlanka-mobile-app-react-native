@@ -18,7 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 
 export default function Login() {
-    // const navigation = useNavigation();
+    const navigation = useNavigation();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -46,9 +46,9 @@ export default function Login() {
             showSuccess();
 
             if (response.data.usertype === "admin" || response.data.usertype === "manager") {
-                // navigation.navigate('Home');
-            } else {
-                // navigation.navigate('Error');
+                navigation.navigate('menu');
+            }else {
+                Alert.alert("Error " , "This use User only & Try Again ")
             }
         } catch (err) {
             const errorMessage = err.response?.data?.message || "Invalid username or password";
@@ -112,7 +112,7 @@ export default function Login() {
                             {isLoading ? (
                                 <ActivityIndicator color="#fff" />
                             ) : (
-                                <Text style={styles.buttonText}>Sign in</Text>
+                                <Text style={styles.buttonText}>Login in</Text>
                             )}
                         </TouchableOpacity>
 

@@ -29,7 +29,7 @@ function MyTabBar({ state, descriptors, navigation }) {
   return (
     <View style={{ 
       flexDirection: 'row', 
-      height: 70, // Increased tab bar height to accommodate larger icons
+      height: 70, 
       backgroundColor: 'white',
       borderTopWidth: 1,
       borderTopColor: colors.border,
