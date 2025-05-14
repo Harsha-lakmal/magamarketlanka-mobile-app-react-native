@@ -1,17 +1,17 @@
 import React from 'react';
-import { View, Platform, Image } from 'react-native';
+import { View, Image } from 'react-native';
 import { useLinkBuilder, useTheme } from '@react-navigation/native';
-import { Text, PlatformPressable } from '@react-navigation/elements';
+import { PlatformPressable } from '@react-navigation/elements';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import ProfileIcon from '../../asstes/profile.png';
-import HomeIcon from '../../asstes/Home.png';
-import OrderIcon from '../../asstes/orders.png';
-import StockIcon from '../../asstes/stock.png';
+import ProfileIcon from '../../assets/profile.png';
+import HomeIcon from '../../assets/Home.png';
+import OrderIcon from '../../assets/orders.png';
+import StockIcon from '../../assets/stock.png';
 
-import HomeScreen from '../../srceen/HomeScreen/Home';
-import ProfileScreen from '../../srceen/AboutScreen/About';
-import StockScreen from '../../srceen/StockScreen/Stock';
-import OrderScreen from '../../srceen/OrderScreen/Order';
+import HomeScreen from '../../screens/HomeScreen/Home';
+import ProfileScreen from '../../screens/AboutScreen/About';
+import StockScreen from '../../screens/StockScreen/Stock';
+import OrderScreen from '../../screens/OrderScreen/Order';
 
 const Tab = createBottomTabNavigator();
 
@@ -19,7 +19,6 @@ function MyTabBar({ state, descriptors, navigation }) {
   const { colors } = useTheme();
   const { buildHref } = useLinkBuilder();
 
-  // Icon images for each tab
   const iconImages = {
     Home: HomeIcon,
     Profile: ProfileIcon,
@@ -30,7 +29,7 @@ function MyTabBar({ state, descriptors, navigation }) {
   return (
     <View style={{ 
       flexDirection: 'row', 
-      height: 60, 
+      height: 70, // Increased tab bar height to accommodate larger icons
       backgroundColor: 'white',
       borderTopWidth: 1,
       borderTopColor: colors.border,
@@ -73,24 +72,16 @@ function MyTabBar({ state, descriptors, navigation }) {
               alignItems: 'center', 
               justifyContent: 'center',
             }}
+            href={buildHref(route.name)}
           >
             <Image 
               source={iconSource} 
               style={{ 
-                width: 24, 
-                height: 24, 
+                width: 40,  // Increased size further
+                height: 40, // Increased size further
                 tintColor: isFocused ? colors.primary : colors.text,
-                marginBottom: 4 
               }} 
             />
-            <Text 
-              style={{ 
-                fontSize: 12,
-                color: isFocused ? colors.primary : colors.text 
-              }}
-            >
-              {route.name}
-            </Text>
           </PlatformPressable>
         );
       })}
