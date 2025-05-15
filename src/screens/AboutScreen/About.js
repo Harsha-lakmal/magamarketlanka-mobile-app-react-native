@@ -8,61 +8,64 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import * as ImagePicker from 'react-native-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useNavigation} from '@react-navigation/native';
-import FilePickerManager from 'react-native-file-picker';
 import {instance} from '../../services/AxiosHolder/AxiosHolder';
-import { tokens } from 'react-native-paper/lib/typescript/styles/themes/v3/tokens';
 
 const About = () => {
   const [coverImage, setCoverImage] = useState(null);
   const [profileImage, setProfileImage] = useState(null);
-  const [cvFile, setCvFile] = useState(null);
-  const [userData, setUserData] = useState(null);
-  const [userId, setUserId] = useState(null);
-  const [token, setToken] = useState(null);
+  const [userData, setUserData] = useState({
+    username: '',
+    email: '',
+    fullName: '',
+    password: '',
+  });
+  const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [coverImageLoading, setCoverImageLoading] = useState(false);
   const [profileImageLoading, setProfileImageLoading] = useState(false);
+
   const navigation = useNavigation();
-  const username  =  AsyncStorage.getItem('username');
+  const username = AsyncStorage.getItem('username');
+  const token  =  AsyncStorage.getItem("jwtToken");
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const storedUserData = await AsyncStorage.getItem('userData');
-        const storedToken = await AsyncStorage.getItem('jwtToken');
-        console.log(storedToken);
-        
-
-        if (storedUserData) {
-          const parsedUserData = JSON.parse(storedUserData);
-          setUserData(parsedUserData);
-          setUserId(parsedUserData.id);
-        }
-
-        if (storedToken) {
-          setToken(storedToken);
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        Alert.alert('Error', 'Failed to load user data');
-      }
-    };
-    fetchData();
+    getUserData();
   }, []);
 
-  useEffect(() => {
-    if (userId && token) {
-      getCoverImage();
-      getProfileImage();
+  const getUserData = async () => {
+    try {
+      setLoading(true);
+      
+      
+      const response = await instance.get(`/MegaMartLanka/user/getName/${username}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      console.log(response);
+      
+      
+      setUserData({
+        username: response.data.username,
+        email: response.data.email,
+        fullName: response.data.fullName || '',
+        password: 'upadatePassworld', 
+      });
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      Alert.alert('Error', 'Failed to load user data');
+    } finally {
+      setLoading(false);
     }
-  }, [userId, token]);
+  };
 
-  const pickImage = setImage => {
+  const pickImage = imageType => {
     const options = {
       mediaType: 'photo',
       includeBase64: false,
@@ -70,30 +73,7 @@ const About = () => {
       selectionLimit: 1,
     };
 
-    function getUserData(){
-      try{
-        instance.get('/api/v1/MegaMartLanka/user/getName/'+username ,  {
-          headers : {
-            Authorization : `Bearer ${token}`
-          }
-        })
-        .then(response =>{
-          console.log(response);
-          
-        }).catch(err =>{
-          console.log(err);
-          
-        })
-
-      } catch(error){
-        console.log(error);
-        
-
-
-      }
-    }
-
-    ImagePicker.launchImageLibrary(options, response => {
+    ImagePicker.launchImageLibrary(options, async response => {
       if (response.didCancel) {
         console.log('User cancelled image picker');
         return;
@@ -119,80 +99,86 @@ const About = () => {
           return;
         }
 
-        setImage(selectedImage);
-
-        if (setImage === setCoverImage) {
-          uploadCoverImg(selectedImage);
-        } else if (setImage === setProfileImage) {
-          uploadProfileImg(selectedImage);
+        try {
+          if (imageType === 'cover') {
+            await uploadCoverImg(selectedImage);
+          } else if (imageType === 'profile') {
+            await uploadProfileImg(selectedImage);
+          }
+        } catch (error) {
+          console.error('Error uploading image:', error);
+          Alert.alert('Error', 'Failed to upload image');
         }
       }
     });
   };
 
+  const deleteAccount = async () => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to delete your account? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await instance.delete(`/api/v1/MegaMartLanka/users/${userId}`, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              Alert.alert('Success', 'Your account has been deleted');
+              handleLogout();
+            } catch (error) {
+              console.error('Error deleting account:', error);
+              Alert.alert('Error', 'Failed to delete account');
+            } finally {
+              setLoading(false);
+            }
+          },
+          style: 'destructive',
+        },
+      ],
+    );
   };
 
-  function  deleteAccount(){
-    try{
-        instance.delete('/MegaMartLanka/users/'_+id  , {
-          headers :{
-            Authorization : `Bearer ${tokens}`
-          }
-        }).then(respose =>{
-          console.log("Your Account delete Susses");
-          handleLogout();
-          
-        }).catch (err =>{
-          console.log("error ");
-          
-        })
-    }catch(err){
-      console.log(err);
-      
-
-    }
-  }
-
-  function updateDetils(){
-    const data  = {
-      username   , 
-      fullname , 
-      password
-    }
+  const updateDetails = async () => {
     try {
-      instance.put("/MegaMartLanka/updateUser/"+id , data  ,  {
-        headers : {
-          Authorization : `Bearer ${tokens}`
-        } 
-      })
+      setLoading(true);
+      const data = {
+        username: userData.username,
+        fullName: userData.fullName,
+        password: userData.password || undefined, // Only send password if changed
+      };
 
-    }catch(err){
-
-    }
-  }
-
-  const handleLogout = async () => {
-    try {
-      await AsyncStorage.removeItem('userData');
-      await AsyncStorage.removeItem('token');
-      Alert.alert('Success', 'Logged out successfully');
-      navigation.reset({
-        index: 0,
-        routes: [{name: 'login'}],
+      await instance.put(`/api/v1/MegaMartLanka/updateUser/${userId}`, data, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
+
+      Alert.alert('Success', 'Profile updated successfully');
+      setEditMode(false);
     } catch (error) {
-      console.error('Logout error:', error);
-      Alert.alert('Error', 'Failed to logout');
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', 'Failed to update profile');
+    } finally {
+      setLoading(false);
     }
   };
 
   const uploadCoverImg = async file => {
-    if (!userId || !file) {
-      Alert.alert('Error', 'User ID or file is missing');
+    if (!userId || !file || !token) {
+      Alert.alert('Error', 'Required information is missing');
       return;
     }
 
-    setLoading(true);
+    setCoverImageLoading(true);
     setError('');
 
     const formData = new FormData();
@@ -204,7 +190,7 @@ const About = () => {
 
     try {
       const response = await instance.post(
-        `/user/uploadCover/${userId}`,
+        `/api/v1/MegaMartLanka/uploadCover/${userId}`,
         formData,
         {
           headers: {
@@ -215,7 +201,7 @@ const About = () => {
       );
 
       if (response.data) {
-        await getCoverImage();
+        await getCoverImage(userId, token);
         Alert.alert('Success', 'Cover image uploaded successfully');
       }
     } catch (err) {
@@ -225,17 +211,17 @@ const About = () => {
       Alert.alert('Error', errorMsg);
       console.error('Error uploading cover image:', err.response || err);
     } finally {
-      setLoading(false);
+      setCoverImageLoading(false);
     }
   };
 
   const uploadProfileImg = async file => {
-    if (!userId || !file) {
-      Alert.alert('Error', 'User ID or file is missing');
+    if (!userId || !file || !token) {
+      Alert.alert('Error', 'Required information is missing');
       return;
     }
 
-    setLoading(true);
+    setProfileImageLoading(true);
     setError('');
 
     const formData = new FormData();
@@ -246,7 +232,8 @@ const About = () => {
     });
 
     try {
-      const response = await instance.post(`/MegaMartLanka/uploadProfile/${id}`,
+      const response = await instance.post(
+        `/api/v1/MegaMartLanka/uploadProfile/${userId}`,
         formData,
         {
           headers: {
@@ -257,7 +244,7 @@ const About = () => {
       );
 
       if (response.data) {
-        await getProfileImage();
+        await getProfileImage(userId, token);
         Alert.alert('Success', 'Profile image uploaded successfully');
       }
     } catch (err) {
@@ -267,21 +254,24 @@ const About = () => {
       Alert.alert('Error', errorMsg);
       console.error('Error uploading profile image:', err.response || err);
     } finally {
-      setLoading(false);
+      setProfileImageLoading(false);
     }
   };
 
-  getCoverImage = async () => {
-    if (!userId || !token) return;
+  const getCoverImage = async (id, authToken) => {
+    if (!id || !authToken) return;
 
     setCoverImageLoading(true);
     setError('');
 
     try {
-      const response = await instance.get(`/MegaMartLanka/get/imageProfile/${id}`, {
-        headers: {Authorization: `Bearer ${token}`},
-        responseType: 'blob',
-      });
+      const response = await instance.get(
+        `/api/v1/MegaMartLanka/get/imageCover/${id}`,
+        {
+          headers: {Authorization: `Bearer ${authToken}`},
+          responseType: 'blob',
+        },
+      );
 
       if (response.data) {
         const blob = response.data;
@@ -292,26 +282,26 @@ const About = () => {
         reader.readAsDataURL(blob);
       }
     } catch (err) {
-      const errorMsg =
-        err.response?.data?.message || 'Failed to load cover image';
-      setError(errorMsg);
-      console.error('Error fetching cover image:', err.response || err);
+      setCoverImage(null);
     } finally {
       setCoverImageLoading(false);
     }
   };
 
-  const getProfileImage = async () => {
-    if (!userId || !token) return;
+  const getProfileImage = async (id, authToken) => {
+    if (!id || !authToken) return;
 
     setProfileImageLoading(true);
     setError('');
 
     try {
-      const response = await instance.get(`/MegaMartLanka/get/imageProfile/${id}`, {
-        headers: {Authorization: `Bearer ${token}`},
-        responseType: 'blob',
-      });
+      const response = await instance.get(
+        `/api/v1/MegaMartLanka/get/imageProfile/${id}`,
+        {
+          headers: {Authorization: `Bearer ${authToken}`},
+          responseType: 'blob',
+        },
+      );
 
       if (response.data) {
         const blob = response.data;
@@ -322,20 +312,38 @@ const About = () => {
         reader.readAsDataURL(blob);
       }
     } catch (err) {
-      const errorMsg =
-        err.response?.data?.message || 'Failed to load profile image';
-      setError(errorMsg);
-      console.error('Error fetching profile image:', err.response || err);
+      // It's okay if profile image doesn't exist
+      setProfileImage(null);
     } finally {
       setProfileImageLoading(false);
     }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.multiRemove(['jwtToken', 'userId']);
+      navigation.reset({
+        index: 0,
+        routes: [{name: 'login'}],
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      Alert.alert('Error', 'Failed to logout');
+    }
+  };
+
+  const handleInputChange = (field, value) => {
+    setUserData(prev => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   return (
     <View style={styles.mainContainer}>
       <ScrollView contentContainerStyle={styles.container}>
         <TouchableOpacity
-          onPress={() => pickImage(setCoverImage)}
+          onPress={() => pickImage('cover')}
           style={styles.coverImageContainer}>
           {coverImageLoading ? (
             <View style={styles.imageLoading}>
@@ -350,16 +358,13 @@ const About = () => {
               }
               style={styles.coverImage}
               resizeMode="cover"
-              onError={e => {
-                console.log('Cover image error:', e.nativeEvent.error);
-                setCoverImage(null);
-              }}
+              onError={() => setCoverImage(null)}
             />
           )}
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => pickImage(setProfileImage)}
+          onPress={() => pickImage('profile')}
           style={styles.profileImageContainer}>
           {profileImageLoading ? (
             <View style={styles.imageLoading}>
@@ -374,38 +379,104 @@ const About = () => {
               }
               style={styles.profileImage}
               resizeMode="cover"
-              onError={e => {
-                console.log('Profile image error:', e.nativeEvent.error);
-                setProfileImage(null);
-              }}
+              onError={() => setProfileImage(null)}
             />
           )}
         </TouchableOpacity>
 
         <View style={styles.infoContainer}>
-          {userData && (
-            <>
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>Name</Text>
-                <Text style={styles.value}>{userData.username}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>Email</Text>
-                <Text style={styles.value}>{userData.email}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>Role</Text>
-                <Text style={styles.value}>{userData.role}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>Password</Text>
-                <Text style={styles.value}>••••••</Text>
-              </View>
-            </>
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Username</Text>
+            {editMode ? (
+              <TextInput
+                style={styles.input}
+                value={userData.username}
+                onChangeText={text => handleInputChange('username', text)}
+              />
+            ) : (
+              <Text style={styles.value}>{userData.username}</Text>
+            )}
+          </View>
+
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Email</Text>
+            {editMode ? (
+              <TextInput
+                style={styles.input}
+                value={userData.email}
+                onChangeText={text => handleInputChange('email', text)}
+                keyboardType="email-address"
+              />
+            ) : (
+              <Text style={styles.value}>{userData.email}</Text>
+            )}
+          </View>
+
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Full Name</Text>
+            {editMode ? (
+              <TextInput
+                style={styles.input}
+                value={userData.fullName}
+                onChangeText={text => handleInputChange('fullName', text)}
+              />
+            ) : (
+              <Text style={styles.value}>{userData.fullName || 'Not set'}</Text>
+            )}
+          </View>
+
+          {editMode && (
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>New Password</Text>
+              <TextInput
+                style={styles.input}
+                value={userData.password}
+                onChangeText={text => handleInputChange('password', text)}
+                secureTextEntry
+                placeholder="Leave empty to keep current"
+              />
+            </View>
           )}
         </View>
 
-      
+        <View style={styles.buttonWrapper}>
+          {editMode ? (
+            <>
+              <TouchableOpacity
+                style={[styles.button, styles.saveButton]}
+                onPress={updateDetails}
+                disabled={loading}>
+                <Text style={styles.buttonText}>
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={() => setEditMode(false)}
+                disabled={loading}>
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={[styles.button, styles.editButton]}
+                onPress={() => setEditMode(true)}>
+                <Text style={styles.buttonText}>Edit Profile</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.deleteButton]}
+                onPress={deleteAccount}>
+                <Text style={styles.buttonText}>Delete Account</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.logoutButton]}
+                onPress={handleLogout}>
+                <Text style={styles.buttonText}>Logout</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
@@ -430,13 +501,12 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     alignItems: 'center',
-    justifyContent: 'center',
     padding: 20,
     paddingBottom: 100,
   },
   coverImageContainer: {
     width: '100%',
-    height: 300,
+    height: 200,
     backgroundColor: '#ddd',
     borderRadius: 15,
     overflow: 'hidden',
@@ -445,9 +515,6 @@ const styles = StyleSheet.create({
   coverImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 15,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
   },
   profileImageContainer: {
     width: 120,
@@ -462,54 +529,76 @@ const styles = StyleSheet.create({
   profileImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 60,
   },
   buttonWrapper: {
     width: '100%',
-    marginTop: 30,
+    marginTop: 20,
+  },
+  button: {
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  editButton: {
+    backgroundColor: '#007bff',
+  },
+  saveButton: {
+    backgroundColor: '#28a745',
+  },
+  cancelButton: {
+    backgroundColor: '#6c757d',
+  },
+  deleteButton: {
+    backgroundColor: '#dc3545',
+  },
+  logoutButton: {
+    backgroundColor: '#ffc107',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   infoContainer: {
     width: '100%',
     padding: 20,
     backgroundColor: '#fff',
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    elevation: 2,
     marginBottom: 20,
+    elevation: 2,
   },
   infoRow: {
     flexDirection: 'row',
-    marginBottom: 10,
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
   },
   label: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#007bff',
+    width: '30%',
   },
   value: {
     fontSize: 16,
     color: '#333',
+    width: '65%',
+    textAlign: 'right',
   },
-  loginButton: {
-    backgroundColor: 'red',
-    paddingVertical: 15,
-    borderRadius: 8,
-    marginBottom: 15,
-    alignItems: 'center',
-    elevation: 3,
-    width: '100%',
-  },
-  loginButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+  input: {
+    fontSize: 16,
+    color: '#333',
+    width: '65%',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    paddingVertical: 5,
   },
   imageLoading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f0f0f0',
   },
   loadingOverlay: {
     position: 'absolute',
@@ -520,7 +609,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    zIndex: 2000,
   },
   errorText: {
     color: 'red',
@@ -528,7 +616,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   bottomPadding: {
-    height: 80,
+    height: 20,
   },
 });
 
