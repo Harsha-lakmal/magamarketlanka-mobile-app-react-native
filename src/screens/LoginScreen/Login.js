@@ -50,6 +50,7 @@ export default function Login() {
 
       if (response.data.usertype === 'user') {
         AsyncStorage.setItem('jwtToken', response.data.jwtToken);
+        AsyncStorage.setItem('username' ,  response.data.username)
 
         navigation.navigate('menu');
       } else {
