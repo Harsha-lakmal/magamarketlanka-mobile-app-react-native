@@ -14,11 +14,11 @@ import {
     SafeAreaView,
     Dimensions
 } from 'react-native';
-// import { useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 
 export default function SignUp() {
-    // const navigation = useNavigation();
+    const navigation = useNavigation();
     const [username, setUsername] = useState('');
     const [fullName, setFullName] = useState('');
     const [password, setPassword] = useState('');
@@ -36,7 +36,7 @@ export default function SignUp() {
             [
                 { 
                     text: "OK", 
-                    // onPress: () => navigation.navigate('Login') 
+                    onPress: () => navigation.navigate('Login') 
                 }
             ]
         );
@@ -102,7 +102,7 @@ export default function SignUp() {
                 >
                     <View style={styles.box}>
                         <Image 
-                            source={require('../../asstes/magamarketlk.png')} 
+                            source={require('../../assets/magamarketlk.png')} 
                             style={styles.logo} 
                             resizeMode="contain"
                         />
@@ -195,7 +195,7 @@ export default function SignUp() {
 
                         <TouchableOpacity 
                             style={[styles.button, styles.cancelButton]} 
-                            onPress={() => navigation.navigate('Login')}
+                            onPress={() => navigation.navigate('login')}
                         >
                             <Text style={styles.buttonText}>Cancel</Text>
                         </TouchableOpacity>
@@ -204,7 +204,7 @@ export default function SignUp() {
                             Already have an account? {' '}
                             <Text 
                                 style={styles.link}
-                                onPress={() => navigation.navigate('Login')}
+                                onPress={() => navigation.navigate('login')}
                             >
                                 Sign in
                             </Text>

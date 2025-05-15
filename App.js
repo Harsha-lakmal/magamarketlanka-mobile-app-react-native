@@ -1,7 +1,6 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-
 import LoginScreen from './src/screens/LoginScreen/Login';
 import SignUpScreen from './src/screens/SignUpScreen/SignUp';
 import MyTabs from './src/comon/MyTabBar/MyTabBar';

@@ -42,8 +42,10 @@ export default function Login() {
 
         try {
             setIsLoading(true);
-            const response = await axios.post("http://your-api-url/login", data); // Replace with your API
+            const response = await axios.post("/MegaMartLanka/login", data); 
             showSuccess();
+            console.log(response);
+            
 
             if (response.data.usertype === "admin" || response.data.usertype === "manager") {
                 navigation.navigate('menu');
@@ -51,6 +53,8 @@ export default function Login() {
                 Alert.alert("Error " , "This use User only & Try Again ")
             }
         } catch (err) {
+            console.log(err);
+            
             const errorMessage = err.response?.data?.message || "Invalid username or password";
             setError(errorMessage);
             showError(errorMessage);
@@ -71,7 +75,7 @@ export default function Login() {
                 >
                     <View style={styles.box}>
                         <Image 
-                            source={require('../../asstes/magamarketlk.png')} 
+                            source={require('../../assets/magamarketlk.png')} 
                             style={styles.logo} 
                             resizeMode="contain"
                         />
@@ -118,7 +122,7 @@ export default function Login() {
 
                         <TouchableOpacity 
                             style={[styles.button, styles.signupButton]} 
-                            onPress={() => navigation.navigate('SignUp')}
+                            onPress={() => navigation.navigate('signup')}
                         >
                             <Text style={styles.buttonText}>Sign up</Text>
                         </TouchableOpacity>
