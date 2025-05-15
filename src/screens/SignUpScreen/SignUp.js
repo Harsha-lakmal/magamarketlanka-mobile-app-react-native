@@ -1,33 +1,30 @@
 import React, { useState } from 'react';
 import { 
-    View, 
-    Text, 
-    TextInput, 
-    TouchableOpacity, 
-    Image, 
-    ActivityIndicator, 
-    StyleSheet,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    SafeAreaView,
-    Dimensions
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  Image, 
+  ActivityIndicator, 
+  StyleSheet, 
+  Alert, 
+  KeyboardAvoidingView, 
+  Platform, 
+  ScrollView, 
+  SafeAreaView, 
+  Dimensions
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import axios from 'axios';
+import { instance } from '../../services/AxiosHolder/AxiosHolder';
 
 export default function SignUp() {
     const navigation = useNavigation();
     const [username, setUsername] = useState('');
-    const [fullName, setFullName] = useState('');
+    const [fullname, setFullName] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [role, setRole] = useState('user'); // Default role
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-
-    const roles = ['user', 'admin', 'manager'];
 
     function showSuccess() {
         Alert.alert(
@@ -36,10 +33,18 @@ export default function SignUp() {
             [
                 { 
                     text: "OK", 
-                    onPress: () => navigation.navigate('Login') 
+                    onPress: () => navigation.navigate('login') 
                 }
             ]
         );
+    }
+
+    function  clear(){
+        setConfirmPassword("");
+        setError("");
+        setFullName("");
+        setUsername("");
+        setPassword("");
     }
 
     function showError(message) {
@@ -47,7 +52,7 @@ export default function SignUp() {
     }
 
     const validateForm = () => {
-        if (!username || !fullName || !password || !confirmPassword) {
+        if (!username || !fullname || !password || !confirmPassword) {
             setError('All fields are required');
             return false;
         }
@@ -72,17 +77,24 @@ export default function SignUp() {
 
         const data = { 
             username, 
-            fullName, 
+            fullname, 
             password,
-            role
+            userType: "user", 
+            coverImgPath: "null",  
+            profileImgPath: "null"
         };
 
         try {
             setIsLoading(true);
-            const response = await axios.post("http://your-api-url/register", data); // Replace with your API
+            console.log("Sending data:", data);
+            
+            const response = await instance.post("/MegaMartLanka/AddUsers", data); 
+            
             showSuccess();
+            clear();
         } catch (err) {
             const errorMessage = err.response?.data?.message || "Registration failed. Please try again.";
+            clear();
             setError(errorMessage);
             showError(errorMessage);
         } finally {
@@ -127,7 +139,7 @@ export default function SignUp() {
                         <TextInput
                             style={styles.input}
                             placeholder="Full Name"
-                            value={fullName}
+                            value={fullname}
                             onChangeText={(text) => {
                                 setFullName(text);
                                 setError('');
@@ -157,29 +169,6 @@ export default function SignUp() {
                             }}
                             autoCapitalize="none"
                         />
-
-                        {/* <Text style={styles.roleLabel}>Select Role:</Text>
-                        <View style={styles.roleContainer}>
-                            {roles.map((r) => (
-                                <TouchableOpacity
-                                    key={r}
-                                    style={[
-                                        styles.roleButton,
-                                        role === r && styles.roleButtonActive
-                                    ]}
-                                    onPress={() => setRole(r)}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.roleButtonText,
-                                            role === r && styles.roleButtonTextActive
-                                        ]}
-                                    >
-                                        {r.charAt(0).toUpperCase() + r.slice(1)}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View> */}
 
                         <TouchableOpacity 
                             style={styles.button} 
@@ -220,13 +209,10 @@ const { width, height } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
     container: {
-    
-      
-        top :  12
+        top: 12
     },
     keyboardAvoidingView: {
-        height : 1000 
-    
+        height: 1000 
     },
     scrollContainer: {
         flexGrow: 1,
@@ -289,39 +275,6 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         fontSize: 16,
         backgroundColor: '#f8fafc'
-    },
-    roleLabel: {
-        alignSelf: 'flex-start',
-        marginBottom: 8,
-        color: '#64748b',
-        fontSize: 14,
-    },
-    roleContainer: {
-        flexDirection: 'row',
-        width: '100%',
-        marginBottom: 20,
-        justifyContent: 'space-between',
-    },
-    roleButton: {
-        paddingVertical: 10,
-        paddingHorizontal: 10,
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-        borderRadius: 8,
-        marginHorizontal: 4,
-        alignItems: 'center',
-    },
-    roleButtonActive: {
-        backgroundColor: '#0284c7',
-        borderColor: '#0284c7',
-    },
-    roleButtonText: {
-        color: '#64748b',
-        fontSize: 14,
-    },
-    roleButtonTextActive: {
-        color: '#ffffff',
-        fontWeight: '500',
     },
     button: {
         width: '100%',
