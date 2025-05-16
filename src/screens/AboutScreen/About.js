@@ -20,8 +20,8 @@ const About = () => {
   const [profileImage, setProfileImage] = useState(null);
   const [userData, setUserData] = useState({
     username: '',
-    email: '',
-    fullName: '',
+    role: '',
+    fullname: '',
     password: '',
   });
   const [editMode, setEditMode] = useState(false);
@@ -32,7 +32,7 @@ const About = () => {
 
   const navigation = useNavigation();
   const username = AsyncStorage.getItem('username');
-  const token  =  AsyncStorage.getItem("jwtToken");
+  const token = AsyncStorage.getItem('jwtToken');
 
   useEffect(() => {
     getUserData();
@@ -41,21 +41,31 @@ const About = () => {
   const getUserData = async () => {
     try {
       setLoading(true);
-      
-      
-      const response = await instance.get(`/MegaMartLanka/user/getName/${username}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
+
+      const username = await AsyncStorage.getItem('username');
+      const token = await AsyncStorage.getItem('jwtToken');
+
+      if (!username || !token) {
+        throw new Error('Missing token or username');
+      }
+
+      const response = await instance.get(
+        `/MegaMartLanka/user/getName/${username}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
-      console.log(response);
-      
-      
+      );
+
+      console.log(response.data);
+
       setUserData({
+        id: response.data.id,
         username: response.data.username,
-        email: response.data.email,
-        fullName: response.data.fullName || '',
-        password: 'upadatePassworld', 
+        fullname: response.data.fullname || '',
+        password: '............',
+        role: response.data.userType,
       });
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -65,6 +75,9 @@ const About = () => {
     }
   };
 
+  function test() {
+    console.log(userData);
+  }
   const pickImage = imageType => {
     const options = {
       mediaType: 'photo',
@@ -152,7 +165,7 @@ const About = () => {
       setLoading(true);
       const data = {
         username: userData.username,
-        fullName: userData.fullName,
+        fullname: userData.fullname,
         password: userData.password || undefined, // Only send password if changed
       };
 
@@ -173,7 +186,10 @@ const About = () => {
   };
 
   const uploadCoverImg = async file => {
-    if (!userId || !file || !token) {
+    const id = userData.id;
+    const token = await AsyncStorage.getItem('jwtToken');
+
+    if (!id || !file || !token) {
       Alert.alert('Error', 'Required information is missing');
       return;
     }
@@ -190,7 +206,7 @@ const About = () => {
 
     try {
       const response = await instance.post(
-        `/api/v1/MegaMartLanka/uploadCover/${userId}`,
+        `/MegaMartLanka/uploadCover/${id}`,
         formData,
         {
           headers: {
@@ -199,9 +215,10 @@ const About = () => {
           },
         },
       );
+      console.log(response.data);
 
       if (response.data) {
-        await getCoverImage(userId, token);
+        await getCoverImage(id, token);
         Alert.alert('Success', 'Cover image uploaded successfully');
       }
     } catch (err) {
@@ -216,7 +233,10 @@ const About = () => {
   };
 
   const uploadProfileImg = async file => {
-    if (!userId || !file || !token) {
+    const id = userData.id;
+    const token = await AsyncStorage.getItem('jwtToken');
+
+    if (!id || !file || !token) {
       Alert.alert('Error', 'Required information is missing');
       return;
     }
@@ -233,7 +253,7 @@ const About = () => {
 
     try {
       const response = await instance.post(
-        `/api/v1/MegaMartLanka/uploadProfile/${userId}`,
+        `/MegaMartLanka/uploadProfile/${id}`,
         formData,
         {
           headers: {
@@ -244,7 +264,7 @@ const About = () => {
       );
 
       if (response.data) {
-        await getProfileImage(userId, token);
+        await getProfileImage(id, token);
         Alert.alert('Success', 'Profile image uploaded successfully');
       }
     } catch (err) {
@@ -258,17 +278,20 @@ const About = () => {
     }
   };
 
-  const getCoverImage = async (id, authToken) => {
-    if (!id || !authToken) return;
+  const getCoverImage = async () => {
+    const id = userData.id;
+    const token = await AsyncStorage.getItem('jwtToken');
+
+    if (!id || !token) return;
 
     setCoverImageLoading(true);
     setError('');
 
     try {
       const response = await instance.get(
-        `/api/v1/MegaMartLanka/get/imageCover/${id}`,
+        `/MegaMartLanka/get/imageCover/${id}`,
         {
-          headers: {Authorization: `Bearer ${authToken}`},
+          headers: {Authorization: `Bearer ${token}`},
           responseType: 'blob',
         },
       );
@@ -288,17 +311,20 @@ const About = () => {
     }
   };
 
-  const getProfileImage = async (id, authToken) => {
-    if (!id || !authToken) return;
+  const getProfileImage = async () => {
+    const id = userData.id;
+    const token = await AsyncStorage.getItem('jwtToken');
+
+    if (!id || !token) return;
 
     setProfileImageLoading(true);
     setError('');
 
     try {
       const response = await instance.get(
-        `/api/v1/MegaMartLanka/get/imageProfile/${id}`,
+        `/MegaMartLanka/get/imageProfile/${id}`,
         {
-          headers: {Authorization: `Bearer ${authToken}`},
+          headers: {Authorization: `Bearer ${token}`},
           responseType: 'blob',
         },
       );
@@ -399,29 +425,28 @@ const About = () => {
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.label}>Email</Text>
-            {editMode ? (
-              <TextInput
-                style={styles.input}
-                value={userData.email}
-                onChangeText={text => handleInputChange('email', text)}
-                keyboardType="email-address"
-              />
-            ) : (
-              <Text style={styles.value}>{userData.email}</Text>
-            )}
-          </View>
-
-          <View style={styles.infoRow}>
             <Text style={styles.label}>Full Name</Text>
             {editMode ? (
               <TextInput
                 style={styles.input}
-                value={userData.fullName}
+                value={userData.fullname}
                 onChangeText={text => handleInputChange('fullName', text)}
               />
             ) : (
-              <Text style={styles.value}>{userData.fullName || 'Not set'}</Text>
+              <Text style={styles.value}>{userData.fullname || 'Not set'}</Text>
+            )}
+          </View>
+
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Email</Text>
+            {editMode ? (
+              <TextInput
+                style={styles.input}
+                value={userData.role}
+                onChangeText={text => handleInputChange('role', text)}
+              />
+            ) : (
+              <Text style={styles.value}>{userData.role}</Text>
             )}
           </View>
 
@@ -473,6 +498,11 @@ const About = () => {
                 style={[styles.button, styles.logoutButton]}
                 onPress={handleLogout}>
                 <Text style={styles.buttonText}>Logout</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.logoutButton]}
+                onPress={getCoverImage}>
+                <Text style={styles.buttonText}>test</Text>
               </TouchableOpacity>
             </>
           )}
