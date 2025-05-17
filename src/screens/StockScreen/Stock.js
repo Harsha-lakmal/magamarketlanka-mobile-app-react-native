@@ -87,15 +87,7 @@ export default function Stock() {
     fetchStockData();
   };
 
-  const handleLogout = async () => {
-    try {
-      await AsyncStorage.removeItem('jwtToken');
-      // Navigation logic would go here
-      console.log('Logged out successfully');
-    } catch (error) {
-      console.log('Error logging out:', error);
-    }
-  };
+
 
   const renderItem = ({item}) => (
     <View style={styles.card}>
@@ -143,11 +135,7 @@ export default function Stock() {
         refreshing={loading}
         onRefresh={handleRefresh}
       />
-      <TouchableOpacity
-        style={styles.logoutButton}
-        onPress={handleLogout}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
+   
     </View>
   );
 }

@@ -19,7 +19,6 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import {instance} from '../../services/AxiosHolder/AxiosHolder';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-
 const {width} = Dimensions.get('window');
 
 const Order = () => {
@@ -37,7 +36,6 @@ const Order = () => {
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
   const [productImages, setProductImages] = useState({});
-
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [collectingCash, setCollectingCash] = useState(false);
   const [cashCollected, setCashCollected] = useState(false);
@@ -92,19 +90,23 @@ const Order = () => {
 
   const getProductImage = async (id, token) => {
     try {
-      // For React Native, we can't use URL.createObjectURL directly with blobs
-      // Change the response type and handle the image differently
       const response = await instance.get(
         `/MegaMartLanka/get/image/${id}`,
         {
           headers: {Authorization: `Bearer ${token}`},
-          responseType: 'arraybuffer', // Use arraybuffer instead of blob for React Native
+          responseType: 'arraybuffer',
         },
       );
 
       if (response.data) {
-        const base64 = Buffer.from(response.data, 'binary').toString('base64');
-        return `data:image/jpeg;base64,${base64}`;
+        // Convert arraybuffer to base64
+        const base64String = btoa(
+          new Uint8Array(response.data).reduce(
+            (data, byte) => data + String.fromCharCode(byte),
+            ''
+          )
+        );
+        return `data:image/jpeg;base64,${base64String}`;
       }
       return null;
     } catch (err) {
@@ -206,7 +208,6 @@ const Order = () => {
     );
 
     if (existingItemIndex >= 0) {
-      // Update existing item
       const updatedCart = [...cartList];
       updatedCart[existingItemIndex] = {
         ...updatedCart[existingItemIndex],
@@ -235,7 +236,6 @@ const Order = () => {
         ]);
       }
     } else {
-      // Add new item
       const newCartItem = {
         stockId: stockitem.id,
         itemId: product.id,
@@ -302,7 +302,11 @@ const Order = () => {
       <View style={styles.productCard}>
         <View style={styles.productImageContainer}>
           {imageUri ? (
-            <Image source={{uri: imageUri}} style={styles.productImage} />
+            <Image 
+              source={{uri: imageUri}} 
+              style={styles.productImage}
+              onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+            />
           ) : (
             <View style={styles.productImagePlaceholder}>
               <Icon name="image" size={40} color="#6d28d9" />
@@ -392,7 +396,6 @@ const Order = () => {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}>
-      {/* Checkout Modal */}
       <Modal
         visible={isCheckingOut}
         animationType="slide"
@@ -528,7 +531,6 @@ const Order = () => {
         </View>
       </Modal>
 
-      {/* Main Screen */}
       <View style={styles.header}>
         <View style={styles.searchContainer}>
           <Icon
@@ -646,6 +648,7 @@ const Order = () => {
     </KeyboardAvoidingView>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
