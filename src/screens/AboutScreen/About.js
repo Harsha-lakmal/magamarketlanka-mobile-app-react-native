@@ -19,6 +19,7 @@ const About = () => {
   const [coverImage, setCoverImage] = useState(null);
   const [profileImage, setProfileImage] = useState(null);
   const [userData, setUserData] = useState({
+    id: '',
     username: '',
     role: '',
     fullname: '',
@@ -31,17 +32,28 @@ const About = () => {
   const [profileImageLoading, setProfileImageLoading] = useState(false);
 
   const navigation = useNavigation();
-  const username = AsyncStorage.getItem('username');
-  const token = AsyncStorage.getItem('jwtToken');
 
   useEffect(() => {
-    getUserData();
+    const fetchData = async () => {
+      try {
+        const id = await getUserData();
+        const token = await AsyncStorage.getItem('jwtToken');
+        if (id && token) {
+          await Promise.all([
+            getCoverImage(id, token),
+            getProfileImage(id, token),
+          ]);
+        }
+      } catch (error) {
+        console.error('Initial data loading error:', error);
+      }
+    };
+    fetchData();
   }, []);
 
   const getUserData = async () => {
     try {
       setLoading(true);
-
       const username = await AsyncStorage.getItem('username');
       const token = await AsyncStorage.getItem('jwtToken');
 
@@ -58,8 +70,6 @@ const About = () => {
         },
       );
 
-      console.log(response.data);
-
       setUserData({
         id: response.data.id,
         username: response.data.username,
@@ -67,18 +77,18 @@ const About = () => {
         password: '............',
         role: response.data.userType,
       });
+
+      return response.data.id;
     } catch (error) {
       console.error('Error fetching user data:', error);
       Alert.alert('Error', 'Failed to load user data');
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  function test() {
-    console.log(userData);
-  }
-  const pickImage = imageType => {
+  const pickImage = (imageType) => {
     const options = {
       mediaType: 'photo',
       includeBase64: false,
@@ -86,14 +96,12 @@ const About = () => {
       selectionLimit: 1,
     };
 
-    ImagePicker.launchImageLibrary(options, async response => {
+    ImagePicker.launchImageLibrary(options, async (response) => {
       if (response.didCancel) {
-        console.log('User cancelled image picker');
         return;
       }
 
       if (response.errorCode) {
-        console.log('ImagePicker Error: ', response.errorMessage);
         Alert.alert('Error', response.errorMessage || 'Failed to pick image');
         return;
       }
@@ -113,10 +121,17 @@ const About = () => {
         }
 
         try {
+          const token = await AsyncStorage.getItem('jwtToken');
+          const id = userData.id;
+
+          if (!id || !token) {
+            throw new Error('Missing user ID or token');
+          }
+
           if (imageType === 'cover') {
-            await uploadCoverImg(selectedImage);
+            await uploadCoverImg(selectedImage, id, token);
           } else if (imageType === 'profile') {
-            await uploadProfileImg(selectedImage);
+            await uploadProfileImg(selectedImage, id, token);
           }
         } catch (error) {
           console.error('Error uploading image:', error);
@@ -126,86 +141,19 @@ const About = () => {
     });
   };
 
-  const deleteAccount = async () => {
-    Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete your account? This action cannot be undone.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await instance.delete(`/api/v1/MegaMartLanka/users/${userId}`, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              });
-              Alert.alert('Success', 'Your account has been deleted');
-              handleLogout();
-            } catch (error) {
-              console.error('Error deleting account:', error);
-              Alert.alert('Error', 'Failed to delete account');
-            } finally {
-              setLoading(false);
-            }
-          },
-          style: 'destructive',
-        },
-      ],
-    );
-  };
-
-  const updateDetails = async () => {
+  const uploadCoverImg = async (file, id, token) => {
     try {
-      setLoading(true);
-      const data = {
-        username: userData.username,
-        fullname: userData.fullname,
-        password: userData.password || undefined, // Only send password if changed
-      };
+      setCoverImageLoading(true);
+      setError('');
 
-      await instance.put(`/api/v1/MegaMartLanka/updateUser/${userId}`, data, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const formData = new FormData();
+      formData.append('file', {
+        uri: file.uri,
+        type: file.type || 'image/jpeg',
+        name: file.fileName || `cover-${Date.now()}.jpg`,
       });
 
-      Alert.alert('Success', 'Profile updated successfully');
-      setEditMode(false);
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const uploadCoverImg = async file => {
-    const id = userData.id;
-    const token = await AsyncStorage.getItem('jwtToken');
-
-    if (!id || !file || !token) {
-      Alert.alert('Error', 'Required information is missing');
-      return;
-    }
-
-    setCoverImageLoading(true);
-    setError('');
-
-    const formData = new FormData();
-    formData.append('file', {
-      uri: file.uri,
-      type: file.type || 'image/jpeg',
-      name: file.fileName || `cover-${Date.now()}.jpg`,
-    });
-
-    try {
-      const response = await instance.post(
+      await instance.post(
         `/MegaMartLanka/uploadCover/${id}`,
         formData,
         {
@@ -215,44 +163,32 @@ const About = () => {
           },
         },
       );
-      console.log(response.data);
 
-      if (response.data) {
-        await getCoverImage(id, token);
-        Alert.alert('Success', 'Cover image uploaded successfully');
-      }
+      await getCoverImage(id, token);
+      Alert.alert('Success', 'Cover image uploaded successfully');
     } catch (err) {
-      const errorMsg =
-        err.response?.data?.message || 'Failed to upload cover image';
+      const errorMsg = err.response?.data?.message || 'Failed to upload cover image';
       setError(errorMsg);
       Alert.alert('Error', errorMsg);
-      console.error('Error uploading cover image:', err.response || err);
+      console.error('Error uploading cover image:', err);
     } finally {
       setCoverImageLoading(false);
     }
   };
 
-  const uploadProfileImg = async file => {
-    const id = userData.id;
-    const token = await AsyncStorage.getItem('jwtToken');
-
-    if (!id || !file || !token) {
-      Alert.alert('Error', 'Required information is missing');
-      return;
-    }
-
-    setProfileImageLoading(true);
-    setError('');
-
-    const formData = new FormData();
-    formData.append('file', {
-      uri: file.uri,
-      type: file.type || 'image/jpeg',
-      name: file.fileName || `profile-${Date.now()}.jpg`,
-    });
-
+  const uploadProfileImg = async (file, id, token) => {
     try {
-      const response = await instance.post(
+      setProfileImageLoading(true);
+      setError('');
+
+      const formData = new FormData();
+      formData.append('file', {
+        uri: file.uri,
+        type: file.type || 'image/jpeg',
+        name: file.fileName || `profile-${Date.now()}.jpg`,
+      });
+
+      await instance.post(
         `/MegaMartLanka/uploadProfile/${id}`,
         formData,
         {
@@ -263,31 +199,21 @@ const About = () => {
         },
       );
 
-      if (response.data) {
-        await getProfileImage(id, token);
-        Alert.alert('Success', 'Profile image uploaded successfully');
-      }
+      await getProfileImage(id, token);
+      Alert.alert('Success', 'Profile image uploaded successfully');
     } catch (err) {
-      const errorMsg =
-        err.response?.data?.message || 'Failed to upload profile image';
+      const errorMsg = err.response?.data?.message || 'Failed to upload profile image';
       setError(errorMsg);
       Alert.alert('Error', errorMsg);
-      console.error('Error uploading profile image:', err.response || err);
+      console.error('Error uploading profile image:', err);
     } finally {
       setProfileImageLoading(false);
     }
   };
 
-  const getCoverImage = async () => {
-    const id = userData.id;
-    const token = await AsyncStorage.getItem('jwtToken');
-
-    if (!id || !token) return;
-
-    setCoverImageLoading(true);
-    setError('');
-
+  const getCoverImage = async (id, token) => {
     try {
+      setCoverImageLoading(true);
       const response = await instance.get(
         `/MegaMartLanka/get/imageCover/${id}`,
         {
@@ -311,16 +237,9 @@ const About = () => {
     }
   };
 
-  const getProfileImage = async () => {
-    const id = userData.id;
-    const token = await AsyncStorage.getItem('jwtToken');
-
-    if (!id || !token) return;
-
-    setProfileImageLoading(true);
-    setError('');
-
+  const getProfileImage = async (id, token) => {
     try {
+      setProfileImageLoading(true);
       const response = await instance.get(
         `/MegaMartLanka/get/imageProfile/${id}`,
         {
@@ -338,16 +257,78 @@ const About = () => {
         reader.readAsDataURL(blob);
       }
     } catch (err) {
-      // It's okay if profile image doesn't exist
       setProfileImage(null);
     } finally {
       setProfileImageLoading(false);
     }
   };
 
+  const deleteAccount = async () => {
+    const id = userData.id;
+    const token = await AsyncStorage.getItem('jwtToken');
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to delete your account? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await instance.delete(`/MegaMartLanka/users/${id}`, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              Alert.alert('Success', 'Your account has been deleted');
+              handleLogout();
+            } catch (error) {
+              console.error('Error deleting account:', error);
+              Alert.alert('Error', 'Failed to delete account');
+            } finally {
+              setLoading(false);
+            }
+          },
+          style: 'destructive',
+        },
+      ],
+    );
+  };
+
+  const updateDetails = async () => {
+    const id = userData.id;
+    const token = await AsyncStorage.getItem('jwtToken');
+    try {
+      setLoading(true);
+      const data = {
+        username: userData.username,
+        fullname: userData.fullname,
+        password: userData.password !== '............' ? userData.password : undefined,
+      };
+
+      await instance.put(`/MegaMartLanka/updateUser/${id}`, data, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      Alert.alert('Success', 'Profile updated successfully');
+      setEditMode(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', 'Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
-      await AsyncStorage.multiRemove(['jwtToken', 'userId']);
+      await AsyncStorage.multiRemove(['jwtToken', 'userId', 'username']);
       navigation.reset({
         index: 0,
         routes: [{name: 'login'}],
@@ -430,7 +411,7 @@ const About = () => {
               <TextInput
                 style={styles.input}
                 value={userData.fullname}
-                onChangeText={text => handleInputChange('fullName', text)}
+                onChangeText={text => handleInputChange('fullname', text)}
               />
             ) : (
               <Text style={styles.value}>{userData.fullname || 'Not set'}</Text>
@@ -438,16 +419,8 @@ const About = () => {
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.label}>Email</Text>
-            {editMode ? (
-              <TextInput
-                style={styles.input}
-                value={userData.role}
-                onChangeText={text => handleInputChange('role', text)}
-              />
-            ) : (
-              <Text style={styles.value}>{userData.role}</Text>
-            )}
+            <Text style={styles.label}>Role</Text>
+            <Text style={styles.value}>{userData.role}</Text>
           </View>
 
           {editMode && (
@@ -498,11 +471,6 @@ const About = () => {
                 style={[styles.button, styles.logoutButton]}
                 onPress={handleLogout}>
                 <Text style={styles.buttonText}>Logout</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.logoutButton]}
-                onPress={getCoverImage}>
-                <Text style={styles.buttonText}>test</Text>
               </TouchableOpacity>
             </>
           )}
