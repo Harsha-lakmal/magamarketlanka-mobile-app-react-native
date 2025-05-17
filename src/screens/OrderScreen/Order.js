@@ -19,6 +19,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import {instance} from '../../services/AxiosHolder/AxiosHolder';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+
 const {width} = Dimensions.get('window');
 
 const Order = () => {
@@ -35,6 +36,7 @@ const Order = () => {
   const [stockDtos, setStockDtos] = useState([]);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+  const [productImages, setProductImages] = useState({});
 
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [collectingCash, setCollectingCash] = useState(false);
@@ -68,11 +70,48 @@ const Order = () => {
 
       const response = await instance.get('/MegaMartLanka/items', config);
       setProducts(response.data);
+      
+      // Load images for all products
+      const images = {};
+      for (const product of response.data) {
+        try {
+          const imageUrl = await getProductImage(product.id, token);
+          if (imageUrl) {
+            images[product.id] = imageUrl;
+          }
+        } catch (err) {
+          console.log(`Error loading image for product ${product.id}:`, err);
+        }
+      }
+      setProductImages(images);
     } catch (error) {
       console.log(error.response?.data || error.message);
       throw error;
     }
   }
+
+  const getProductImage = async (id, token) => {
+    try {
+      // For React Native, we can't use URL.createObjectURL directly with blobs
+      // Change the response type and handle the image differently
+      const response = await instance.get(
+        `/MegaMartLanka/get/image/${id}`,
+        {
+          headers: {Authorization: `Bearer ${token}`},
+          responseType: 'arraybuffer', // Use arraybuffer instead of blob for React Native
+        },
+      );
+
+      if (response.data) {
+        const base64 = Buffer.from(response.data, 'binary').toString('base64');
+        return `data:image/jpeg;base64,${base64}`;
+      }
+      return null;
+    } catch (err) {
+      console.log(`Error loading image for product ${id}:`, err);
+      return null;
+    }
+  };
 
   async function getStocks() {
     try {
@@ -257,11 +296,18 @@ const Order = () => {
   const renderProductItem = ({item}) => {
     const stockitem = stocks.find(stock => stock.item.id === item.id);
     const qoh = stockitem ? stockitem.qoh : 0;
+    const imageUri = productImages[item.id];
 
     return (
       <View style={styles.productCard}>
-        <View style={styles.productImagePlaceholder}>
-          <Icon name="image" size={40} color="#6d28d9" />
+        <View style={styles.productImageContainer}>
+          {imageUri ? (
+            <Image source={{uri: imageUri}} style={styles.productImage} />
+          ) : (
+            <View style={styles.productImagePlaceholder}>
+              <Icon name="image" size={40} color="#6d28d9" />
+            </View>
+          )}
         </View>
         <Text style={styles.productName}>{item.name}</Text>
         <Text style={styles.productDescription} numberOfLines={2}>
@@ -600,7 +646,6 @@ const Order = () => {
     </KeyboardAvoidingView>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -711,13 +756,22 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     width: (width - 40) / 2,
   },
-  productImagePlaceholder: {
+  productImageContainer: {
     height: 100,
-    backgroundColor: '#f3e8ff',
     borderRadius: 8,
+    marginBottom: 10,
+    overflow: 'hidden',
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  productImagePlaceholder: {
+    flex: 1,
+    backgroundColor: '#f3e8ff',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
   },
   productName: {
     fontSize: 16,
