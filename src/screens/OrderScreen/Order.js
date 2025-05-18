@@ -19,6 +19,13 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import {instance} from '../../services/AxiosHolder/AxiosHolder';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Corrected icon imports
+const closeIcon = require('../../assets/close.png');
+const backIcon = require('../../assets/back.png');
+const refreshIcon = require('../../assets/reload.png');
+const searchIcon = require('../../assets/search.png');
+const shoppingCartIcon = require('../../assets/sopin-card.png');
+
 const {width} = Dimensions.get('window');
 
 const Order = () => {
@@ -57,6 +64,10 @@ const Order = () => {
     loadData();
   }, []);
 
+  function backToGo() {
+    navigation.navigate('menu');
+  }
+
   async function getProducts() {
     try {
       const token = await AsyncStorage.getItem('jwtToken');
@@ -68,7 +79,7 @@ const Order = () => {
 
       const response = await instance.get('/MegaMartLanka/items', config);
       setProducts(response.data);
-      
+
       // Load images for all products
       const images = {};
       for (const product of response.data) {
@@ -90,21 +101,18 @@ const Order = () => {
 
   const getProductImage = async (id, token) => {
     try {
-      const response = await instance.get(
-        `/MegaMartLanka/get/image/${id}`,
-        {
-          headers: {Authorization: `Bearer ${token}`},
-          responseType: 'arraybuffer',
-        },
-      );
+      const response = await instance.get(`/MegaMartLanka/get/image/${id}`, {
+        headers: {Authorization: `Bearer ${token}`},
+        responseType: 'arraybuffer',
+      });
 
       if (response.data) {
         // Convert arraybuffer to base64
         const base64String = btoa(
           new Uint8Array(response.data).reduce(
             (data, byte) => data + String.fromCharCode(byte),
-            ''
-          )
+            '',
+          ),
         );
         return `data:image/jpeg;base64,${base64String}`;
       }
@@ -172,7 +180,7 @@ const Order = () => {
       setLoading(true);
       await getFromStock();
       await placeOrder();
-      Alert.alert('Success', 'Order placed successfully');
+      Alert.alert('Success', 'Order placed successfully');cls
       resetOrder();
       navigation.navigate('Order');
     } catch (error) {
@@ -194,7 +202,7 @@ const Order = () => {
 
     if (quantity <= 0) {
       setError('Quantity must be at least 1');
-      return;
+      return; 
     }
 
     const newOrder = [...order];
@@ -302,10 +310,12 @@ const Order = () => {
       <View style={styles.productCard}>
         <View style={styles.productImageContainer}>
           {imageUri ? (
-            <Image 
-              source={{uri: imageUri}} 
+            <Image
+              source={{uri: imageUri}}
               style={styles.productImage}
-              onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+              onError={e =>
+                console.log('Image load error:', e.nativeEvent.error)
+              }
             />
           ) : (
             <View style={styles.productImagePlaceholder}>
@@ -377,7 +387,7 @@ const Order = () => {
       <View style={styles.cartItemHeader}>
         <Text style={styles.cartItemName}>{item.name}</Text>
         <TouchableOpacity onPress={() => removeFromCart(item)}>
-          <Icon name="close" size={20} color="#dc2626" />
+          <Image source={closeIcon} style={styles.iconImage} />
         </TouchableOpacity>
       </View>
       <Text style={styles.cartItemDesc} numberOfLines={1}>
@@ -406,7 +416,7 @@ const Order = () => {
             <TouchableOpacity
               onPress={() => setIsCheckingOut(false)}
               style={styles.backButton}>
-              <Icon name="arrow-back" size={24} color="#6d28d9" />
+              <Image source={backIcon} style={styles.backIcon} />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Order Summary</Text>
             <View style={styles.backButton} />
@@ -532,13 +542,11 @@ const Order = () => {
       </Modal>
 
       <View style={styles.header}>
+        <TouchableOpacity onPress={backToGo} style={styles.backButton}>
+          <Image source={backIcon} style={styles.backIcon} />
+        </TouchableOpacity>
         <View style={styles.searchContainer}>
-          <Icon
-            name="search"
-            size={20}
-            color="#6d28d9"
-            style={styles.searchIcon}
-          />
+          <Image source={searchIcon} style={styles.iconImage} />
           <TextInput
             style={styles.searchInput}
             value={search}
@@ -550,7 +558,7 @@ const Order = () => {
         <TouchableOpacity
           style={styles.cartButton}
           onPress={() => setIsCartOpen(!isCartOpen)}>
-          <Icon name="shopping-cart" size={24} color="white" />
+          <Image source={shoppingCartIcon} style={styles.iconImage} />
           {cartList.length > 0 && (
             <View style={styles.cartBadge}>
               <Text style={styles.cartBadgeText}>{cartList.length}</Text>
@@ -562,7 +570,7 @@ const Order = () => {
       {loading && (
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingContainer}>
-            <Icon name="refresh" size={30} color="#6d28d9" />
+            <Image source={refreshIcon} style={styles.iconImage} />
             <Text style={styles.loadingText}>Loading...</Text>
           </View>
         </View>
@@ -618,7 +626,11 @@ const Order = () => {
                   </>
                 ) : (
                   <View style={styles.emptyCart}>
-                    <Icon name="remove-shopping-cart" size={50} color="#d1d5db" />
+                    <Icon
+                      name="remove-shopping-cart"
+                      size={50}
+                      color="#d1d5db"
+                    />
                     <Text style={styles.emptyCartText}>Your cart is empty</Text>
                     <Text style={styles.emptyCartSubtext}>
                       Select items to add to your cart
@@ -684,6 +696,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  backIcon: {
+    width: 24,
+    height: 24,
+    tintColor: '#6d28d9',
+  },
   searchContainer: {
     flex: 1,
     flexDirection: 'row',
@@ -694,7 +718,10 @@ const styles = StyleSheet.create({
     marginRight: 10,
     height: 44,
   },
-  searchIcon: {
+  iconImage: {
+    width: 20,
+    height: 20,
+    tintColor: '#6d28d9',
     marginRight: 10,
   },
   searchInput: {
@@ -973,10 +1000,6 @@ const styles = StyleSheet.create({
     padding: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
-  },
-  backButton: {
-    width: 40,
-    alignItems: 'flex-start',
   },
   modalTitle: {
     fontSize: 20,

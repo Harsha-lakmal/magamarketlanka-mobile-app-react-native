@@ -1,10 +1,12 @@
-import {View, Text, TouchableOpacity, FlatList, StyleSheet, ScrollView, TextInput, Modal, Alert} from 'react-native';
+import {View, Text, TouchableOpacity, FlatList, StyleSheet, ScrollView, TextInput, Modal, Alert, ActivityIndicator} from 'react-native';
 import {instance} from '../../services/AxiosHolder/AxiosHolder';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, {useState, useEffect} from 'react';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
 
 export default function Home() {
+  const navigation = useNavigation();
   const [categories, setCategories] = useState([]);
   const [stockItems, setStockItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -87,7 +89,7 @@ export default function Home() {
         styles.categoryItem,
         selectedCategory === item.id && styles.selectedCategoryItem
       ]}
-      onPress={() => setSelectedCategory(item.id === selectedCategory ? null : item.id)}
+      onPress={() => setSelectedCategory(item.id)}
     >
       <Text style={[
         styles.categoryText,
@@ -108,6 +110,12 @@ export default function Home() {
           <Text style={styles.categoryBadgeText}>{item.category.name}</Text>
         </View>
       </View>
+      <TouchableOpacity 
+        style={styles.orderButton}
+        onPress={() => navigation.navigate('Order', { item })}
+      >
+        <Text style={styles.orderButtonText}>Order</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -127,14 +135,30 @@ export default function Home() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Categories</Text>
           </View>
-          <FlatList
-            horizontal
-            data={categories}
-            renderItem={renderCategoryItem}
-            keyExtractor={item => item.id.toString()}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesContainer}
-          />
+          <View style={styles.categoriesContainer}>
+            <TouchableOpacity
+              style={[
+                styles.categoryItem,
+                selectedCategory === null && styles.selectedCategoryItem
+              ]}
+              onPress={() => setSelectedCategory(null)}
+            >
+              <Text style={[
+                styles.categoryText,
+                selectedCategory === null && styles.selectedCategoryText
+              ]}>
+                All
+              </Text>
+            </TouchableOpacity>
+            <FlatList
+              horizontal
+              data={categories}
+              renderItem={renderCategoryItem}
+              keyExtractor={item => item.id.toString()}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoriesList}
+            />
+          </View>
         </View>
 
         {/* Items Section */}
@@ -161,56 +185,7 @@ export default function Home() {
         </View>
       </ScrollView>
 
-      {/* Add Category Floating Button */}
-      <TouchableOpacity 
-        style={styles.addButton}
-        onPress={() => setModalVisible(true)}
-      >
-        <Icon name="add" size={24} color="white" />
-      </TouchableOpacity>
-
-      {/* Add Category Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add New Category</Text>
-            
-            <TextInput
-              style={styles.input}
-              placeholder="Category Name"
-              value={newCategoryName}
-              onChangeText={setNewCategoryName}
-            />
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setModalVisible(false)}
-                disabled={isSubmitting}
-              >
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.submitButton]}
-                onPress={handleAddCategory}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text style={styles.buttonText}>Add Category</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+     
     </View>
   );
 }
@@ -242,7 +217,12 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   categoriesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingBottom: 5,
+  },
+  categoriesList: {
+    paddingLeft: 10,
   },
   categoryItem: {
     paddingHorizontal: 20,
@@ -320,10 +300,46 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#95a5a6',
   },
-  addButton: {
+  orderButton: {
+    backgroundColor: '#3498db',
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  orderButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  bottomButtonsContainer: {
     position: 'absolute',
-    bottom: 30,
-    right: 30,
+    bottom: 20,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  bottomButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 25,
+    marginRight: 15,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  ordersButton: {
+    backgroundColor: '#2c3e50',
+  },
+  bottomButtonText: {
+    color: 'white',
+    marginLeft: 5,
+    fontWeight: '500',
+  },
+  addButton: {
     width: 56,
     height: 56,
     borderRadius: 28,

@@ -6,6 +6,7 @@ import SignUpScreen from './src/screens/SignUpScreen/SignUp';
 import MyTabs from './src/comon/MyTabBar/MyTabBar';
 import About from './src/screens/AboutScreen/About';
 import { View } from 'react-native';
+import  Order  from  './src/screens/OrderScreen/Order'
 
 const Tab = createBottomTabNavigator();
 
@@ -39,6 +40,13 @@ export default function App() {
         <Tab.Screen 
           name="menu" 
           component={MyTabs} 
+          options={{
+            tabBarButton: () => null,
+          }}
+        />
+          <Tab.Screen 
+          name="order" 
+          component={Order} 
           options={{
             tabBarButton: () => null,
           }}

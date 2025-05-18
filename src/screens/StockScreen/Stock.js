@@ -10,8 +10,11 @@ import {
 } from 'react-native';
 import {instance} from '../../services/AxiosHolder/AxiosHolder';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
+import OrderScreen from '../OrderScreen/Order';
 
 export default function Stock() {
+  const navigation = useNavigation();
   const [stockItems, setStockItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [imageUrls, setImageUrls] = useState({});
@@ -87,7 +90,9 @@ export default function Stock() {
     fetchStockData();
   };
 
-
+  const handleOrderPress = (item) => {
+    navigation.navigate('order', { item });
+  };
 
   const renderItem = ({item}) => (
     <View style={styles.card}>
@@ -111,6 +116,12 @@ export default function Stock() {
           <Text style={styles.cardPrice}>${item.price.toFixed(2)}</Text>
           <Text style={styles.cardCategory}>{item.category.name}</Text>
         </View>
+        <TouchableOpacity 
+          style={styles.orderButton} 
+          onPress={() => handleOrderPress(item)}
+        >
+          <Text style={styles.orderButtonText}>Order</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -135,7 +146,6 @@ export default function Stock() {
         refreshing={loading}
         onRefresh={handleRefresh}
       />
-   
     </View>
   );
 }
@@ -199,6 +209,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12,
   },
   cardPrice: {
     fontSize: 16,
@@ -213,14 +224,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 10,
   },
-  logoutButton: {
+  orderButton: {
     backgroundColor: '#2e86de',
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 10,
   },
-  logoutText: {
+  orderButtonText: {
     color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
